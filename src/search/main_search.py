@@ -368,30 +368,25 @@ def logging_switches(switches, PRIMITIVES):
 
 
 def train_trans(data, model, architect, criterion, optimizer, lr, epoch):
-    objs = src.utils.AvgrageMeter()
-    top1 = src.utils.AvgrageMeter()
-    top5 = src.utils.AvgrageMeter()
+    objs = src.utils_lib.utils.AvgrageMeter()
+    top1 = src.utils_lib.utils.AvgrageMeter()
 
     model.train()
     target = Variable(data.y[data.train_mask], requires_grad=False).to(device)
 
-    # architecture send input or send logits, which are important for computation in architecture
     architect.step(data.to(device), lr, optimizer, unrolled=args.unrolled)
-    # architect.optimizer.zero_grad()
-    # train loss
+
     logits = model(data.to(device))
-    # print(len(model.NA_PRIMITIVES))
+
     input = logits[data.train_mask].to(device)
 
     optimizer.zero_grad()
     loss = criterion(input, target)
-    # loss.backward(retain_graph=True)
     loss.backward()
     nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     optimizer.step()
 
-    # prec1, prec5 = utils_lib.accuracy(input, target, topk=(1, 3), flag='Train')
-    prec1, lbl_stat, pred_stat = src.utils.accuracy_f(input, target)
+    prec1, lbl_stat, pred_stat = src.utils_lib.utils.accuracy_f(input, target)
 
     if epoch % 20 == 0:
         logging.info('FLAG--{}--predition counter:{}'.format('Train', Counter(np.array(pred_stat.reshape(-1).cpu()))))
@@ -401,26 +396,21 @@ def train_trans(data, model, architect, criterion, optimizer, lr, epoch):
     n = input.size(0)
     objs.update(loss.data.item(), n)
     top1.update(prec1.data.item(), n)
-    # top5.update(prec5.data.item(), n)
 
     return top1.avg, objs.avg
 
 
 def train_shrink(epoch, data, model, network_params, criterion, optimizer, lr, arch_lr, train_arch=False):
-    objs = src.utils.AvgrageMeter()
-    top1 = src.utils.AvgrageMeter()
-    top5 = src.utils.AvgrageMeter()
-    objs_arch = src.utils.AvgrageMeter()
+    objs = src.utils_lib.utils.AvgrageMeter()
+    top1 = src.utils_lib.utils.AvgrageMeter()
+    objs_arch = src.utils_lib.utils.AvgrageMeter()
 
     model.train()
     target = Variable(data.y[data.train_mask], requires_grad=False).to(device)
 
     if train_arch:
         architect = Architect(model, arch_lr, args)
-        # architecture send input or send logits, which are important for computation in architecture
         loss_arch = architect.step(data.to(device), lr, optimizer, unrolled=args.unrolled)
-        # architect.scheduler.step()
-        # logging.info('Epoch:{}, arch_lr: {:.8f}'.format(epoch, arch_lr))
     else:
         loss_arch = torch.zeros(1)
 
@@ -431,16 +421,11 @@ def train_shrink(epoch, data, model, network_params, criterion, optimizer, lr, a
     optimizer.zero_grad()
     loss = criterion(input, target)
     loss.backward()
-    # nn.utils_lib.clip_grad_norm_(network_params, args.grad_clip)
     optimizer.step()
 
-    # prec1, prec5 = utils_lib.accuracy(input, target, topk=(1, 3),flag='Train')
-    # prec1 = utils_lib.accuracy_f(input, target,flag='Train')
-
-    prec1, lbl_stat, pred_stat = src.utils.accuracy_f(input, target)
+    prec1, lbl_stat, pred_stat = src.utils_lib.utils.accuracy_f(input, target)
 
     if epoch % 20 == 0 and epoch >= 20:
-        # print(epoch % 20, 21%20)
         logging.info('FLAG--{}--predition counter:{}'.format('Train', Counter(np.array(pred_stat.reshape(-1).cpu()))))
         logging.info('FLAG--{}--This is the number of predict correct in per class:{}'.format('Train', Counter(
             np.array(lbl_stat[pred_stat.eq(lbl_stat)].cpu()))))
@@ -449,7 +434,6 @@ def train_shrink(epoch, data, model, network_params, criterion, optimizer, lr, a
     objs.update(loss.data.item(), n)
     objs_arch.update(loss_arch.data.item(), n)
     top1.update(prec1.data.item(), n)
-    # top5.update(prec5.data.item(), n)
     if train_arch:
         return top1.avg, objs.avg, objs_arch.avg, architect
     else:
