@@ -26,7 +26,7 @@ import scipy.sparse as sp
 import copy
 
 parser = argparse.ArgumentParser("AutoHeG-search")
-parser.add_argument('--data', type=str, default='chameleon', help='dataset')
+parser.add_argument('--data', type=str, default='texas', help='dataset')
 parser.add_argument('--learning_rate', type=float, default=0.005, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=0.005, help='mininum learning rate')
 parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
@@ -50,7 +50,7 @@ parser.add_argument('--edge_index', type=str, default='mixhop', choices=['mixhop
                     help='edge_index')
 parser.add_argument('--space_ver', type=str, default='v1', choices=['v0', 'v1', 'v2', 'v3'],
                     help='search space version, v0=all homo-SANE, v1= all homo & hetero, v2= subset of v1 with all homo and hetero, v3=all hetero')
-parser.add_argument('--num_layers', type=int, default=3, help='num of GNN layers in SANE')
+parser.add_argument('--num_layers', type=int, default=3, help='num of GNN layers in AutoHeG')
 parser.add_argument('--train_rate', type=float, default=0.4)
 parser.add_argument('--val_rate', type=float, default=0.4)
 
@@ -101,7 +101,7 @@ def main():
 
     if not torch.cuda.is_available():
         logging.info('no gpu device available')
-        sys.exit(1)
+        #sys.exit(1)
 
     cudnn.benchmark = True
     torch.manual_seed(args.seed)
@@ -114,16 +114,16 @@ def main():
 
     # 2. loading structure information with edge index, 'treecomp' from paper TDGNN, 'mixhop' is used in the proposed AutoHeG, else use original 'Adj'
     if args.edge_index == 'treecomp':
-        treecom_edge_file = './tree_info/hop_edge_index_' + args.data + '_' + str(args.tree_layer)
+        treecom_edge_file = '../tree_info/hop_edge_index_' + args.data + '_' + str(args.tree_layer)
         if (path.exists(treecom_edge_file) == False):
             edge_info(dataset, args)
-        tree_edge_index = torch.load('./tree_info/hop_edge_index_' + args.data + '_' + str(args.tree_layer))
+        tree_edge_index = torch.load('../tree_info/hop_edge_index_' + args.data + '_' + str(args.tree_layer))
         data.tree_edge_index = tree_edge_index
     elif args.edge_index == 'mixhop':
-        mixhop_edge_file = './mixhop_info/mixhop_edge_index_' + args.data + '_' + str(args.num_layers)
+        mixhop_edge_file = '../mixhop_info/mixhop_edge_index_' + args.data + '_' + str(args.num_layers)
         if (path.exists(mixhop_edge_file) == False):
             mixhop_edge_info(dataset[0], args)
-        mix_edge_index = torch.load('./mixhop_info/mixhop_edge_index_' + args.data + '_' + str(args.num_layers))
+        mix_edge_index = torch.load('../mixhop_info/mixhop_edge_index_' + args.data + '_' + str(args.num_layers))
         data.mix_edge_index = mix_edge_index
         logging.info('This is the mix hop info: one-hop: {}, two-hop: {}, three-hop: {}' \
                      .format(mix_edge_index[0].shape, mix_edge_index[1].shape, mix_edge_index[2].shape))
@@ -145,7 +145,7 @@ def main():
     # 3. splitting dataset
     # NOTE: for searching, using fixed data split 4/4/2.
 
-    data_splits = np.load('splits_search/' + args.data + '/' + args.data + '_split_0.4_0.4_0.2.npz')
+    data_splits = np.load('../splits_search/' + args.data + '/' + args.data + '_split_0.4_0.4_0.2.npz')
     data.train_mask = torch.from_numpy(data_splits['train_mask']).bool()
     data.val_mask = torch.from_numpy(data_splits['val_mask']).bool()
     data.test_mask = torch.from_numpy(data_splits['test_mask']).bool()
@@ -414,7 +414,7 @@ def train_shrink(epoch, data, model, network_params, criterion, optimizer, lr, a
     else:
         loss_arch = torch.zeros(1)
 
-    # train loss
+    # finetune loss
     logits = model(data.to(device))
     input = logits[data.train_mask].to(device)
 

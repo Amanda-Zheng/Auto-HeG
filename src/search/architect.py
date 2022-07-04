@@ -18,7 +18,7 @@ class Architect(object):
             lr=lr, betas=(0.5, 0.999), weight_decay=args.arch_weight_decay)
 
     def _compute_unrolled_model(self, data, eta, network_optimizer):
-        loss = self.model._loss(data, is_valid=False) #train loss
+        loss = self.model._loss(data, is_valid=False) #finetune loss
         theta = _concat(self.model.parameters()).data# w
         try:
             moment = _concat(network_optimizer.state[v]['momentum_buffer'] for v in self.model.parameters()).mul_(self.network_momentum)
@@ -80,12 +80,12 @@ class Architect(object):
         R = r / _concat(vector).norm()
         for p, v in zip(self.model.parameters(), vector):
             p.data.add_(R, v) # R * d(L_val/w', i.e., get w^+
-        loss = self.model._loss(data, is_valid=False) # train loss
+        loss = self.model._loss(data, is_valid=False) # finetune loss
         grads_p = torch.autograd.grad(loss, self.model.arch_parameters()) # d(L_train)/d_alpha, w^+
 
         for p, v in zip(self.model.parameters(), vector):
             p.data.sub_(2*R, v) # get w^-, need to subtract 2 * R since it has add R
-        loss = self.model._loss(data, is_valid=False)# train loss
+        loss = self.model._loss(data, is_valid=False)# finetune loss
         grads_n = torch.autograd.grad(loss, self.model.arch_parameters())# d(L_train)/d_alpha, w^-
 
         #reset to the orignial w, always using the self.model, i.e., the original model

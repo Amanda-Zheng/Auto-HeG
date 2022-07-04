@@ -13,7 +13,7 @@ from sklearn.metrics import f1_score
 #assert args.model in ['GeniePath', 'GeniePathLazy']
 
 #path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'PPI')
-#train_dataset = PPI(path, split='train')
+#train_dataset = PPI(path, split='finetune')
 #val_dataset = PPI(path, split='val')
 #test_dataset = PPI(path, split='test')
 #train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
@@ -145,7 +145,7 @@ def test(loader):
     return f1_score(y, pred, average='micro') if pred.sum() > 0 else 0
 
 #for epoch in range(1, 101):
-#    loss = train()
+#    loss = finetune()
 #    val_f1 = test(val_loader)
 #    test_f1 = test(test_loader)
 #    print('Epoch: {:02d}, Loss: {:.4f}, Val: {:.4f}, Test: {:.4f}'.format(

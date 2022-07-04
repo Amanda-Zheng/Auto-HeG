@@ -285,16 +285,16 @@ def DataLoader(name):
         # use everything from "geom_gcn_preprocess=False" and
         # only the node label y from "geom_gcn_preprocess=True"
         preProcDs = WikipediaNetwork(
-            root='../data/', name=name, geom_gcn_preprocess=False, transform=T.NormalizeFeatures())
+            root='../../data/', name=name, geom_gcn_preprocess=False, transform=T.NormalizeFeatures())
         dataset = WikipediaNetwork(
-            root='../data/', name=name, geom_gcn_preprocess=True, transform=T.NormalizeFeatures())
+            root='../../data/', name=name, geom_gcn_preprocess=True, transform=T.NormalizeFeatures())
         dataset[0].edge_index = preProcDs[0].edge_index
 
     elif name in ['film']:
         dataset = Actor(
-            root='../data/film', transform=T.NormalizeFeatures())
+            root='../../data/film', transform=T.NormalizeFeatures())
     elif name in ['texas', 'cornell', 'wisconsin']:
-        dataset = WebKB_(root='../data/',
+        dataset = WebKB_(root='../../data/',
                          name=name, transform=T.NormalizeFeatures())
     else:
         raise ValueError(f'dataset {name} not supported in dataloader')

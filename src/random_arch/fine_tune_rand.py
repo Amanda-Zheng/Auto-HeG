@@ -12,23 +12,22 @@ from hyperopt import fmin, tpe, hp, Trials, partial, STATUS_OK
 from src.finetune.train4tune import main
 
 autoheg_space ={'model': 'AutoHeG',
-         'hidden_size': hp.choice('hidden_size', [16, 32, 64, 128, 256]),
-         'learning_rate': hp.uniform("lr", -3, -2),
-         'weight_decay': hp.uniform("wr", -5, -3),
-         'optimizer': hp.choice('opt', ['adagrad', 'adam']),
-         'in_dropout': hp.choice('in_dropout', [0, 1, 2, 3, 4, 5, 6]),
-         'out_dropout': hp.choice('out_dropout', [0, 1, 2, 3, 4, 5, 6]),
-         'activation': hp.choice('act', ['relu', 'elu'])
+         'hidden_size': hp.choice('hidden_size', [64]),
+         'weight_decay': hp.choice("wr", [-5]),
+         'optimizer': hp.choice('opt', ['adagrad']),
+         'in_dropout': hp.choice('in_dropout', [3]),
+         'out_dropout': hp.choice('out_dropout', [3]),
+         'activation': hp.choice('act', ['relu'])
          }
-
 def get_args():
-    parser = argparse.ArgumentParser("AutoHeG-Finetune")
+    parser = argparse.ArgumentParser("AutoHeG-Finetune-random")
     parser.add_argument('--device', type=str, default='cuda:0', help='cuda:0 or cpu')
     parser.add_argument('--data', type=str, default='cornell', help='dataset')
     parser.add_argument('--save_path', type=str, default='EXP_train', help='experiment name')
-    parser.add_argument('--arch_filename', type=str, default='', help='given the location of searched res')
+    parser.add_argument('--arch_filename', type=str, default='./EXP_search/origin-cornell-20220315-124141-252046/Argmax-cornell-searched_res-20220315-124346-eps0.0-reg0.0005.txt', help='given the location of searched res')
     parser.add_argument('--arch', type=str, default='', help='given the specific of searched res')
-    parser.add_argument('--arch_opt', type=str, required=True, choices =['argmax_arch','proj_loss_arch','proj_hetro_arch'], help='make option to evaluate which arch')
+    parser.add_argument('--arch_opt', type=str, required=True, choices =['random'], help='make option to evaluate which arch')
+    parser.add_argument('--learning_rate', type=float, default=0.005)
     parser.add_argument('--num_layers', type=int, default=3, help='num of GNN layers in AutoHeG')
     parser.add_argument('--fix_last', action='store_true', default=False, help='fix last layer in design architectures.')
     parser.add_argument('--tune_topK', action='store_true', default=False, help='whether to tune topK archs')
@@ -36,15 +35,14 @@ def get_args():
     parser.add_argument('--transductive', action='store_true', help='use transductive settings in train_search.')
     parser.add_argument('--with_linear', action='store_true', default=False, help='whether to use linear in NaOp')
     parser.add_argument('--with_layernorm', action='store_true', default=False, help='whether to use layer norm')
-    parser.add_argument('--hyper_epoch', type=int, default=50, help='epoch in hyperopt.')
+    parser.add_argument('--hyper_epoch', type=int, default=1, help='epoch in hyperopt.')
     parser.add_argument('--tree_layer', type=int, default=10, help='tree layer for decomposition')
-    parser.add_argument('--seed', type=int, default=2, help='random seed')
     parser.add_argument('--edge_index', type=str, required=True, choices=['mixhop', 'treecomp','origin'],
-                        help='location of the data corpus')
-    parser.add_argument('--epochs', type=int, default=1000, help='epoch in finetune GNNs.')
+                        help='edge_index of graph structures')
+    parser.add_argument('--epochs', type=int, default=400, help='epoch in finetune GNNs.')
     parser.add_argument('--kfolds', type=int, default=10, help='k-folds cross validation')
     parser.add_argument('--cos_lr', action='store_true', default=False, help='using lr decay in training GNNs.')
-    parser.add_argument('--weight_loss', action='store_true', default=False, help='whether use weighted_cross_entropy loss')
+
 
     global args1
     args1 = parser.parse_args()
@@ -55,11 +53,12 @@ class ARGS(object):
         super(ARGS, self).__init__()
 
 def generate_args(arg_map):
+
     args = ARGS()
     for k, v in arg_map.items():
         setattr(args, k, v)
     setattr(args, 'rnd_num', 1)
-    args.learning_rate = 10**args.learning_rate
+    args.learning_rate = args1.learning_rate
     args.weight_decay = 10**args.weight_decay
     args.in_dropout = args.in_dropout / 10.0
     args.out_dropout = args.out_dropout / 10.0
@@ -70,7 +69,7 @@ def generate_args(arg_map):
     args.arch_opt = args1.arch_opt
     args.device = args1.device
     args.num_layers = args1.num_layers
-    args.seed = args1.seed
+    args.seed = 2
     args.grad_clip = 5
     args.momentum = 0.9
     args.with_linear = args1.with_linear
@@ -82,13 +81,12 @@ def generate_args(arg_map):
     args.edge_index = args1.edge_index
     args.tree_layer = args1.tree_layer
     args.kflag = 0
-    args.weight_loss = args1.weight_loss
 
     return args
 
 def objective(args):
     args = generate_args(args)
-    vali_acc, test_acc, args = main(args,1)
+    vali_acc, test_acc, args = main(args,0)
     return {
         'loss': -vali_acc,
         'test_acc': test_acc,
@@ -102,23 +100,14 @@ def run_fine_tune():
     logging.info('Loading archs from {}'.format(args1.arch_filename))
 
     suffix = args1.arch_filename.split('_')[-1][:-4]
-
     test_res = []
-    argmax_arch_set = set()
-    proj_loss_arch_set = set()
-    proj_hetro_arch_set = set()
+    arch_set = set()
 
-    if args1.data == 'citeseer':
-        autoheg_space['learning_rate'] = hp.uniform("lr", -2.6, -2)
+    if args1.data == 'CiteSeer':
+        autoheg_space['learning_rate'] = hp.uniform("lr", -2.5, -1.6)
         autoheg_space['weight_decay'] = hp.choice('wr', [-8])
-        autoheg_space['hidden_size'] = hp.choice('hidden_size', [64, 128, 256])
-
-    if args1.data == 'pubmed':
-        autoheg_space['hidden_size'] = hp.choice('hidden_size', [16, 32, 64])
-        autoheg_space['activation']= hp.choice('act', ['relu', 'elu','leaky_relu'])
-
-    if args1.data=='chameleon':
-        autoheg_space['activation']= hp.choice('act', ['relu', 'elu','leaky_relu'])
+        autoheg_space['in_dropout'] = hp.choice('in_dropout', [5])
+        autoheg_space['out_dropout'] = hp.choice('out_dropout', [0])
 
     for ind, l in enumerate(lines):
         try:
@@ -128,39 +117,14 @@ def run_fine_tune():
             #iterate each searched architecture
             parts = l.strip().split(',')
 
-            if args1.arch_opt == 'argmax_arch':
-                argmax_arch = parts[1].split('=')[1]
-                args1.arch = argmax_arch
-                if argmax_arch in argmax_arch_set:
-                    logging.info('ARGMAX_Selection: {}-th arch {} already searched...'.format(ind + 1, argmax_arch))
-                    continue
-                else:
-                    argmax_arch_set.add(argmax_arch)
-                res['searched_info'] = argmax_arch
-
-            if args1.arch_opt=='proj_loss_arch':
-                proj_loss_arch = parts[2].split('=')[1]
-                args1.arch = proj_loss_arch
-                if proj_loss_arch in proj_loss_arch_set:
-                    logging.info('PROJ_LOSS_Selection: {}-th arch {} already searched...'.format(ind + 1, proj_loss_arch))
-                    continue
-                else:
-                    proj_loss_arch_set.add(proj_loss_arch)
-                res['searched_info'] = proj_loss_arch
-            if args1.arch_opt=='proj_hetro_arch':
-                proj_hetro_arch = parts[3].split('=')[1]
-                args1.arch = proj_hetro_arch
-                if proj_hetro_arch in proj_hetro_arch_set:
-                    logging.info('PROJ_HETRO_Selection: {}-th arch {} already searched...'.format(ind + 1, proj_hetro_arch))
-                    continue
-                else:
-                    proj_hetro_arch_set.add(proj_hetro_arch)
-                res['searched_info'] = proj_hetro_arch
+            args1.arch = parts[1].split('=')[1]
+            res['searched_info'] = parts
+            logging.info('here is the search info:{}'.format(parts))
+            arch_set.add(args1.arch)
 
             start = time.time()
             trials = Trials()
             #tune with validation acc, and report the test accuracy with the best validation acc
-            #partial sets the first n_startup_jobs times search is random
             best = fmin(objective, autoheg_space, algo=partial(tpe.suggest, n_startup_jobs=int(args1.hyper_epoch/5)),
                         max_evals=args1.hyper_epoch, trials=trials)
 
@@ -185,7 +149,6 @@ def run_fine_tune():
             test_accs=[]
 
             for i in range(args1.kfolds):
-
                 args.kflag = 1
                 vali_acc, t_acc, test_args = main(args,i)
                 logging.info('cal std: times:{}, valid_Acc:{:.04f}, test_acc:{:.04f}'.format(i,vali_acc,t_acc))
@@ -205,7 +168,7 @@ def run_fine_tune():
             logging.info('error occured for {}-th, arch_info={}, error={}'.format(ind+1, l.strip(), e))
             import traceback
             traceback.print_exc()
-    logging.info('finsh tunining {} argmax_archs, {} proj_loss_archs, {} proj_hetro_archs for {} selection, saved in {}'.format(len(argmax_arch_set), len(proj_loss_arch_set), len(proj_hetro_arch_set),args1.arch_opt, fileout))
+    logging.info('finsh tunining {} archs {} selection, saved in {}'.format(len(arch_set),args1.arch_opt, fileout))
 
 
 if __name__ == '__main__':

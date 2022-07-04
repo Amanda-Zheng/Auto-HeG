@@ -34,26 +34,12 @@ class NaOp(nn.Module):
     self.with_linear = with_linear
 
   def forward(self, x, x0, edge_index):
-    #logging.info(self.primitive)
-    #if self.primitive == 'fagcn' or self.primitive =='gcnii':
+
     if self.with_linear:
         return self.act(self._op(x, x0, edge_index)+self.op_linear(x))
     else:
         return self.act(self._op(x, x0, edge_index))
-    #else:
-    #    if self.with_linear:
-    #        return self.act(self._op(x,edge_index)+self.op_linear(x))
-    #    else:
-    #        return self.act(self._op(x,edge_index))
 
-# class NaMLPOp(nn.Module):
-#     def __init__(self, primitive, in_dim, out_dim, act):
-#         super(NaMLPOp, self).__init__()
-#         self._op = NA_MLP_OPS[primitive](in_dim, out_dim)
-#         self.act = act_map(act)
-# 
-#     def forward(self, x, edge_index):
-#         return self.act(self._op(x, edge_index))
 
 class ScOp(nn.Module):
     def __init__(self, primitive):
@@ -74,9 +60,7 @@ class LaOp(nn.Module):
 
 class NetworkGNN(nn.Module):
     '''
-        implement this for sane.
-        Actually, sane can be seen as the combination of three cells, node aggregator, skip connection, and layer aggregator
-        for sane, we dont need cell, since the DAG is the whole search space, and what we need to do is implement the DAG.
+        implementation of AutoHeG
     '''
     def __init__(self, genotype, criterion, in_dim, out_dim, hidden_size, num_layers=3, in_dropout=0.5, out_dropout=0.5, act='relu', is_mlp=False, args=None):
         super(NetworkGNN, self).__init__()
@@ -117,14 +101,6 @@ class NetworkGNN(nn.Module):
 
         self.classifier = nn.Linear(hidden_size, out_dim)
 
-        #self._initialize_alphas()
-
-    def new(self):
-        model_new = Network(self._C, self._num_classes, self._layers, self._criterion).cuda()
-        for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
-            x.data.copy_(y.data)
-        return model_new
-
     def forward(self, data):
         if self.args.edge_index == 'mixhop':
             x, edge_index = data.x, data.mix_edge_index
@@ -136,7 +112,6 @@ class NetworkGNN(nn.Module):
             edge_index.append(data.edge_index)
             edge_index.append(data.edge_index)
             edge_index.append(data.edge_index)
-        #x, edge_index = data.x, data.edge_index
 
         #generate weights by softmax
         x = self.lin1(x)
@@ -161,48 +136,4 @@ class NetworkGNN(nn.Module):
 
     def _loss(self, logits, target):
         return self._criterion(logits, target)
-
-    '''
-    def _initialize_alphas(self):
-        num_na_ops = len(NA_PRIMITIVES)
-        num_sc_ops = len(SC_PRIMITIVES)
-        num_la_ops = len(LA_PRIMITIVES)
-
-        #self.alphas_normal = Variable(1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
-        self.na_alphas = Variable(1e-3*torch.randn(self.num_layers, num_na_ops).cuda(), requires_grad=True)
-        if self.num_layers > 1:
-            self.sc_alphas = Variable(1e-3*torch.randn(self.num_layers - 1, num_sc_ops).cuda(), requires_grad=True)
-        else:
-            self.sc_alphas = Variable(1e-3*torch.randn(1, num_sc_ops).cuda(), requires_grad=True)
-        self.la_alphas = Variable(1e-3*torch.randn(1, num_la_ops).cuda(), requires_grad=True)
-        self._arch_parameters = [
-            self.na_alphas,
-            self.sc_alphas,
-            self.la_alphas,
-            ]
-
-    def arch_parameters(self):
-        return self._arch_parameters
-    
-    def genotype(self):
-
-        def _parse(na_weights, sc_weights, la_weights):
-            gene = []
-            na_indices = torch.argmax(na_weights, dim=-1)
-            for k in na_indices:
-                gene.append(NA_PRIMITIVES[k])
-            #sc_indices = sc_weights.argmax(dim=-1)
-            sc_indices = torch.argmax(sc_weights, dim=-1)
-            for k in sc_indices:
-                gene.append(SC_PRIMITIVES[k])
-            #la_indices = la_weights.argmax(dim=-1)
-            la_indices = torch.argmax(la_weights, dim=-1)
-            for k in la_indices:
-                gene.append(LA_PRIMITIVES[k])
-            return '||'.join(gene)
-
-        gene = _parse(F.softmax(self.na_alphas, dim=-1).data.cpu(), F.softmax(self.sc_alphas, dim=-1).data.cpu(), F.softmax(self.la_alphas, dim=-1).data.cpu())
-
-        return gene
-    '''
 
