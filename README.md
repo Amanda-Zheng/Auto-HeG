@@ -35,7 +35,7 @@ python fine_tune.py --data texas --edge_index mixhop \
 ```
 *The code of Auto-HeG is partially refered the work [SANE: Search to aggregate neighborhood for Graph Neural Networks, ICDE,2021.](https://github.com/AutoML-Research/SANE)*
 
-# Questions and Issues
+# Discussion & Cite
 
 Please feel free to connect xin.zheng@monash.edu for any questions and issues of this work. 
 
