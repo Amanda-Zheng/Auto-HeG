@@ -1,5 +1,5 @@
 # Auto-HeG: Automated Graph Neural Network on Heterophilic Graphs
-This is the official Pytorch implementation of "Auto-HeG: Automated Graph Neural Network on Heterophilic Graphs" in WWW'23
+Pytorch implementation of WWW'23: "Auto-HeG: Automated Graph Neural Network on Heterophilic Graphs".
 
 # Introduction
 
