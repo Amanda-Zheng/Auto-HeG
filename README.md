@@ -1,4 +1,4 @@
-# Auto-HeG
+# Auto-HeG: Automated Graph Neural Network on Heterophilic Graphs
 This is the official Pytorch implementation of "Auto-HeG: Automated Graph Neural Network on Heterophilic Graphs" in WWW'23
 
 # Introduction
@@ -10,7 +10,16 @@ Specifically, this work incorporates heterophily into three stages:
 (3) heterophily-aware distance guided architecture selection.
 
 Following is the main framework of the proposed Auto-HeG:
-![Auto-HeG_3](https://user-images.githubusercontent.com/61812981/177067417-62743c6f-6f35-43b4-a674-e28127de49bf.png)
+![auto-heg](https://user-images.githubusercontent.com/61812981/218286314-8fb6989d-b7dc-45b2-8948-e5a09ef7e683.png)
+
+## Requirements
+```
+pyg==2.1.0
+pytorch==1.12.0
+pytorch-cluster==1.6.0
+pytorch-scatter==2.0.9
+pytorch-sparse==0.6.15
+```
 
 # Implementation
 
