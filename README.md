@@ -40,11 +40,12 @@ python fine_tune.py --data texas --edge_index mixhop \
 Please feel free to connect xin.zheng@monash.edu for any questions and issues of this work. 
 
 You are welcome to kindly cite our paper:
+```
 @inproceedings{autoheg_zheng2023,
   title={Auto-HeG: Automated Graph Neural Network on Heterophilic Graphs},
   author={Zheng, Xin and Zhang, Miao and Chen, Chunyang and Zhang, Qin and Zhou, Chuan, and Pan, Shirui},
   booktitle={Proceedings of the ACM Web Conference (WWW)},
   year={2023}
 }
-
+```
 
