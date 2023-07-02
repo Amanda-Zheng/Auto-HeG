@@ -352,6 +352,10 @@ class Network(nn.Module):
 
     def arch_parameters(self):
         return self._arch_parameters
+        
+    def set_arch_parameters(self, new_alphas):
+        for alpha, new_alpha in zip(self.arch_parameters(), new_alphas):
+            alpha.data.copy_(new_alpha.data)
 
     def genotype(self):
 
